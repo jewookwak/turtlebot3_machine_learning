@@ -1,22 +1,3 @@
-#!/usr/bin/env python3
-#################################################################################
-# Copyright 2019 ROBOTIS CO., LTD.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#################################################################################
-#
-# Authors: Ryan Shim, Gilbert, ChanHyeong Lee
-
 import collections
 import datetime
 import json
@@ -74,7 +55,8 @@ class DQNAgent(Node):
 
         self.stage = int(stage_num)
         self.train_mode = True
-        self.state_size = 26
+        # self.state_size = 26
+        self.state_size = 14
         self.action_size = 5
         self.max_training_episodes = int(max_training_episodes)
 
@@ -95,6 +77,10 @@ class DQNAgent(Node):
 
         self.model = self.create_qnetwork()
         self.target_model = self.create_qnetwork()
+        
+        # 옵티마이저 분리 (벡터화된 학습용)
+        self.optimizer = Adam(learning_rate=self.learning_rate)
+        
         self.update_target_model()
         self.update_target_after = 5000
         self.target_update_after_counter = 0
@@ -286,7 +272,8 @@ class DQNAgent(Node):
         model.add(Dense(256, activation='relu'))
         model.add(Dense(128, activation='relu'))
         model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=self.learning_rate))
+        # 컴파일 제거 (수동 학습을 위해)
+        # model.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=self.learning_rate))
         model.summary()
 
         return model
@@ -300,48 +287,65 @@ class DQNAgent(Node):
         self.replay_memory.append(transition)
 
     def train_model(self, terminal):
+        """벡터화된 DQN 학습"""
         if len(self.replay_memory) < self.min_replay_memory_size:
             return
+        
+        # 배치 샘플링
         data_in_mini_batch = random.sample(self.replay_memory, self.batch_size)
-
-        current_states = numpy.array([transition[0] for transition in data_in_mini_batch])
-        current_states = current_states.squeeze()
-        current_qvalues_list = self.model.predict(current_states)
-
+        
+        # 배치 데이터 분리
+        states = numpy.array([transition[0] for transition in data_in_mini_batch])
+        actions = numpy.array([transition[1] for transition in data_in_mini_batch])
+        rewards = numpy.array([transition[2] for transition in data_in_mini_batch])
         next_states = numpy.array([transition[3] for transition in data_in_mini_batch])
-        next_states = next_states.squeeze()
-        next_qvalues_list = self.target_model.predict(next_states)
-
-        x_train = []
-        y_train = []
-
-        for index, (current_state, action, reward, _, done) in enumerate(data_in_mini_batch):
-            current_q_values = current_qvalues_list[index]
-
-            if not done:
-                future_reward = numpy.max(next_qvalues_list[index])
-                desired_q = reward + self.discount_factor * future_reward
-            else:
-                desired_q = reward
-
-            current_q_values[action] = desired_q
-            x_train.append(current_state)
-            y_train.append(current_q_values)
-
-        x_train = numpy.array(x_train)
-        y_train = numpy.array(y_train)
-        x_train = numpy.reshape(x_train, [len(data_in_mini_batch), self.state_size])
-        y_train = numpy.reshape(y_train, [len(data_in_mini_batch), self.action_size])
-
-        self.model.fit(
-            tensorflow.convert_to_tensor(x_train, tensorflow.float32),
-            tensorflow.convert_to_tensor(y_train, tensorflow.float32),
-            batch_size=self.batch_size, verbose=0
-        )
+        dones = numpy.array([transition[4] for transition in data_in_mini_batch])
+        
+        # 차원 조정
+        states = states.squeeze()  # (batch_size, state_size)
+        next_states = next_states.squeeze()  # (batch_size, state_size)
+        rewards = rewards.astype(numpy.float32)
+        dones = dones.astype(numpy.float32)
+        
+        # 벡터화된 학습 실행
+        loss = self.train_step(states, actions, rewards, next_states, dones)
+        
+        # 타겟 네트워크 업데이트
         self.target_update_after_counter += 1
-
         if self.target_update_after_counter > self.update_target_after and terminal:
             self.update_target_model()
+        
+        return loss
+
+    def train_step(self, states, actions, rewards, next_states, dones):
+        """벡터화된 DQN 학습 스텝"""
+        with tensorflow.GradientTape() as tape:
+            # 현재 상태에 대한 Q-값 예측
+            current_q_values = self.model(states, training=True)
+            
+            # 선택된 액션의 Q-값만 추출 (벡터화)
+            one_hot_actions = tensorflow.one_hot(actions, self.action_size)
+            selected_q_values = tensorflow.reduce_sum(
+                one_hot_actions * current_q_values, axis=1
+            )
+            
+            # 다음 상태에 대한 타겟 Q-값 계산
+            next_q_values = self.target_model(next_states, training=False)
+            max_next_q_values = tensorflow.reduce_max(next_q_values, axis=1)
+            
+            # 벨만 방정식을 이용한 타겟 계산 (벡터화)
+            targets = rewards + (1.0 - dones) * self.discount_factor * max_next_q_values
+            
+            # 손실 계산 (선택된 액션에 대해서만)
+            loss = tensorflow.reduce_mean(
+                tensorflow.square(targets - selected_q_values)
+            )
+        
+        # 그래디언트 계산 및 적용
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        
+        return loss
 
 
 def main(args=None):
