@@ -1,11 +1,11 @@
-##설치 가이드    
+## 설치 가이드    
 #필요한 패키지  
 turtlebot3: SLAM과 Navigation 등 터틀봇에 필요한 패키지를 모두 담고 있다.  
 turtlebot3_msgs: DQN에 필요한 state, action, reward 메시지(service message)를 담고 있다.  
 turtlebot3_simulations: 심층강화학습을 실행할 각 단계별 Gazebo 시뮬레이션을 담고 있다.  
 turtlebot3_machine_learning: 터틀봇에 적용할 수 있는 DQN 코드를 담고 있다.  
 
-##개선 사항  
+## 개선 사항  
 코드: dqn_gent.py  
 함수: train_model  
 1. 학습 방식 변경  
