@@ -1,41 +1,26 @@
-# TurtleBot3
-<img src="https://raw.githubusercontent.com/ROBOTIS-GIT/emanual/master/assets/images/platform/turtlebot3/logo_turtlebot3.png" width="300">
+## 설치 가이드    
+#필요한 패키지  
+turtlebot3: SLAM과 Navigation 등 터틀봇에 필요한 패키지를 모두 담고 있다.  
+turtlebot3_msgs: DQN에 필요한 state, action, reward 메시지(service message)를 담고 있다.  
+turtlebot3_simulations: 심층강화학습을 실행할 각 단계별 Gazebo 시뮬레이션을 담고 있다.  
+turtlebot3_machine_learning: 터틀봇에 적용할 수 있는 DQN 코드를 담고 있다.  
 
-- Active Branches: noetic, humble, jazzy, main(rolling)
-- Legacy Branches: *-devel
+## 개선 사항  
+코드: dqn_gent.py  
+함수: train_model  
+1. 학습 방식 변경  
+기존: For 루프로 샘플 하나씩 처리  
+개선: 배치 전체를 벡터 연산으로 한번에 처리  
+2. Q-값 처리 효율화  
+기존: 전체 Q-값 벡터 [2.1, 3.5, 1.8, 4.2, 2.9] 저장/계산  
+개선: 선택된 Q-값만 3.5 추출/계산  
+3. 손실 함수 최적화  
+기존: model.fit() - 5개 액션 모두 계산 (4개는 의미없음)  
+개선: GradientTape - 선택된 1개 액션만 계산  
+4. 성능 향상  
 
-## Open Source Projects Related to TurtleBot3
-- [turtlebot3](https://github.com/ROBOTIS-GIT/turtlebot3)
-- [turtlebot3_msgs](https://github.com/ROBOTIS-GIT/turtlebot3_msgs)
-- [turtlebot3_simulations](https://github.com/ROBOTIS-GIT/turtlebot3_simulations)
-- [turtlebot3_manipulation](https://github.com/ROBOTIS-GIT/turtlebot3_manipulation)
-- [turtlebot3_manipulation_simulations](https://github.com/ROBOTIS-GIT/turtlebot3_manipulation_simulations)
-- [turtlebot3_applications](https://github.com/ROBOTIS-GIT/turtlebot3_applications)
-- [turtlebot3_applications_msgs](https://github.com/ROBOTIS-GIT/turtlebot3_applications_msgs)
-- [turtlebot3_machine_learning](https://github.com/ROBOTIS-GIT/turtlebot3_machine_learning)
-- [turtlebot3_autorace](https://github.com/ROBOTIS-GIT/turtlebot3_autorace)
-- [turtlebot3_home_service_challenge](https://github.com/ROBOTIS-GIT/turtlebot3_home_service_challenge)
-- [hls_lfcd_lds_driver](https://github.com/ROBOTIS-GIT/hls_lfcd_lds_driver)
-- [ld08_driver](https://github.com/ROBOTIS-GIT/ld08_driver)
-- [open_manipulator](https://github.com/ROBOTIS-GIT/open_manipulator)
-- [dynamixel_sdk](https://github.com/ROBOTIS-GIT/DynamixelSDK)
-- [OpenCR-Hardware](https://github.com/ROBOTIS-GIT/OpenCR-Hardware)
-- [OpenCR](https://github.com/ROBOTIS-GIT/OpenCR)
+메모리: 60% 적은 메모리 사용  
+속도: 불필요한 계산 제거로 더 빠르게 학습  
 
-## Documentation, Videos, and Community
-
-### Official Documentation
-- ⚙️ **[ROBOTIS DYNAMIXEL](https://dynamixel.com/)**
-- 📚 **[ROBOTIS e-Manual for Dynamixel SDK](http://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_sdk/overview/)**
-- 📚 **[ROBOTIS e-Manual for TurtleBot3](http://turtlebot3.robotis.com/)**
-- 📚 **[ROBOTIS e-Manual for OpenMANIPULATOR-X](https://emanual.robotis.com/docs/en/platform/openmanipulator_x/overview/)**
-
-### Learning Resources
-- 🎥 **[ROBOTIS YouTube Channel](https://www.youtube.com/@ROBOTISCHANNEL)**
-- 🎥 **[ROBOTIS Open Source YouTube Channel](https://www.youtube.com/@ROBOTISOpenSourceTeam)**
-- 🎥 **[ROBOTIS TurtleBot3 YouTube Playlist](https://www.youtube.com/playlist?list=PLRG6WP3c31_XI3wlvHlx2Mp8BYqgqDURU)**
-- 🎥 **[ROBOTIS OpenMANIPULATOR YouTube Playlist](https://www.youtube.com/playlist?list=PLRG6WP3c31_WpEsB6_Rdt3KhiopXQlUkb)**
-
-### Community & Support
-- 💬 **[ROBOTIS Community Forum](https://forum.robotis.com/)**
-- 💬 **[TurtleBot category from ROS Community](https://discourse.ros.org/c/turtlebot/)**
+## 영상  
+https://youtu.be/5iGAN8dJ6Io  
