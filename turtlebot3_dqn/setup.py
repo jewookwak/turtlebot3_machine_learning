@@ -38,6 +38,12 @@ setup(
             'dqn_gazebo = turtlebot3_dqn.dqn_gazebo:main',
             'dqn_test = turtlebot3_dqn.dqn_test:main',
             'result_graph = turtlebot3_dqn.result_graph:main',
+            # DDPG entry points (새로 추가)
+            'ddpg_agent = turtlebot3_dqn.ddpg_agent:main',
+            'ddpg_environment = turtlebot3_dqn.ddpg_environment:main',
+            'ddpg_test = turtlebot3_dqn.ddpg_test:main',
+            'ddpg_action_graph = turtlebot3_dqn.ddpg_action_graph:main',
+            'ddpg_result_graph = turtlebot3_dqn.ddpg_result_graph:main',
         ],
     },
 )
